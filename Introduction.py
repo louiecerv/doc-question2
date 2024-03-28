@@ -16,7 +16,7 @@ model = AutoModelForQuestionAnswering.from_pretrained(model_name, token=access_t
 def app():
 
   # Load the question-answering pipeline
-  question_answerer = pipeline("question-answering", model=model)
+  question_answerer = pipeline("question-answering", model=model, tokenizer=tokenizer)
 
   # Create the Streamlit app layout
   st.title("Document Question Answering")
