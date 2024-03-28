@@ -1,6 +1,7 @@
 import streamlit as st
 from transformers import AutoTokenizer, AutoModelForQuestionAnswering
 import torch
+from transformers import pipeline
 
 # Model and tokenizer names (you can choose a different model from Hugging Face)
 model_name = "distilbert/distilbert-base-cased-distilled-squad"
@@ -12,57 +13,27 @@ access_token = st.secrets["API_key"]
 tokenizer = AutoTokenizer.from_pretrained(tokenizer_name, token=access_token)
 model = AutoModelForQuestionAnswering.from_pretrained(model_name, token=access_token)
 
-def answer_question(document, question):
-  """
-  Answers a question about the given document using the loaded model.
-
-  Args:
-      document: The text document to be analyzed.
-      question: The question to be answered.
-
-  Returns:
-      A dictionary containing the answer text, start and end token positions.
-  """
-  # Encode the document and question using the tokenizer
-  inputs = tokenizer(question, document, return_tensors="pt")
-
-  # Perform QA with the model
-  outputs = model(**inputs)
-
-  if len(outputs) <= 0:
-    return
-  
-  # Get the predicted start and end token positions of the answer
-  start_scores, end_scores = outputs.start_logits, outputs.end_logits
-
-  # Decode predicted tokens back to answer text
-  answer_start = torch.argmax(start_scores)
-  answer_end = torch.argmax(end_scores) + 1
-  #answer = tokenizer.convert_tokens_to_strings(inputs["input_ids"][0][answer_start:answer_end])
-  answer = tokenizer.decode(inputs["input_ids"][0][answer_start:answer_end], skip_special_tokens=True)
-
-  # Return answer info as a dictionary
-  return {"answer": answer[0], "start": answer_start, "end": answer_end}
-
 def app():
 
+  # Load the question-answering pipeline
+  question_answerer = pipeline("question-answering", model=model)
+
+  # Create the Streamlit app layout
   st.title("Document Question Answering")
 
   # Input fields for document and question
-  document = st.text_area("Enter Document Text Here")
-  question = st.text_input("Ask a question about the document")
+  document = st.text_area("Enter the document:")
+  question = st.text_input("Enter the question:")
 
-  # Button to trigger question answering
+  # Button to trigger the answer generation
   if st.button("Answer Question"):
-    if document and question:
-      # Call answer_question function and get answer info
-      answer_info = answer_question(document, question)
-      answer = answer_info["answer"]
+      # Interact with the pipeline model
+      result = question_answerer(question=question, context=document)
 
       # Display the answer
-      st.write(f"Answer: {answer}")
-    else:
-      st.warning("Please provide both document text and a question.")
+      st.write("Answer:", result["answer"])
+      st.write("Score:", result["score"])  # Optionally display the confidence score
+
 
 #run the app
 if __name__ == "__main__":
